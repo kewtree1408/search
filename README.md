@@ -1,4 +1,4 @@
-search
+Search
 ======
 
-search by Kalinin 
+Наработки по курсу "Информационный поиск"
