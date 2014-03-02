@@ -84,14 +84,10 @@ def get_text(urls_xpaths, fname):
     def parse():
         text = ''
         for url in urls_xpaths:
-            print url
-            # html = get_html(url)
             try:
                 t = get_content(url)
             except Exception as ex:
                 print ex
-            # path_value = urls_xpaths[url]
-            # for dd in html.xpath(path_value):
             text += t
         return text
 
@@ -176,7 +172,7 @@ def get_collocs(text, ainfo, fname):
 # отношение правдоподобия
 # ainfo == apriori informations about tokens
 # c == one collocation
-def likelihood_ratio(colloc, ainfo, N, alpha=0.005):
+def likelihood_ratio(colloc, ainfo, N, alpha=0.05):
     w1, w2 = colloc[0][0], colloc[0][1]
     token_freq = dict([(info[0][0], info[1]) for info in ainfo.most_common()])
     # c1, c2, c12 for the number of occurrences of w1, w2, w1w2 in the corpus
@@ -204,7 +200,6 @@ def likelihood_ratio(colloc, ainfo, N, alpha=0.005):
 
 # критерий Пирсона
 def pirson_test(c, bigrams, N, alpha=0.05):
-    # c = new companies
     o11 = c[1] # new companies
     o12 = 0 # old companies
     o21 = 0 # new machines
@@ -216,7 +211,6 @@ def pirson_test(c, bigrams, N, alpha=0.05):
         elif w1 == b[0][0] and w2 != b[0][1]:
             o21 += b[1]
     o22 = N-o11
-    # return o11, o12, o21, o22
     chi_square = (1.0*N *(o11*o22 - o12*o21)**2)/((o11+o12)*(o11+o21)*(o12+o22)*(o21+o22))
     # Для уровня значимости alpha=0,05 порог 3,841, основная гипотеза не может быть отвергнута.
     if chi_square < chi_critical_values[alpha]:
@@ -230,54 +224,13 @@ def pirson_test(c, bigrams, N, alpha=0.05):
 def check_results(collocs, bigrams, info_tokens, fname, check_count=100):
     # начальная гипотеза: H0 – между словами нет зависимости.
     N = sum(collocs.values())
-    ans_p, ans_l = 0, 0
     with codecs.open(fname, encoding='utf-8', mode='w') as f:
         f.write(u"Колокация | Частота вхождения | Критерий Пирсона | Критерий максимального правдоподобия \n")
         for c in collocs.most_common()[:int(check_count)]:
             res_p = pirson_test(c, bigrams, N)
             res_l = likelihood_ratio(c, info_tokens, N)
-            ans_p += int(res_p)
-            ans_l += int(res_l)
             f.write(u"(%s %s %d): p=%s l=%s\n" % (c[0][0], c[0][1], c[1], res_p, res_l))
-    return ans_p, ans_l
 
-
-def anna():
-    name_dir = 'anna_results'
-    try:
-        print u"Все результаты хранятся в папке", name_dir
-        os.mkdir(name_dir)
-    except OSError as ex:
-        pass
-
-    url_xpath_anna = (
-        'http://az.lib.ru/t/tolstoj_lew_nikolaewich/text_0080.shtml',
-    )
-    # сохраняем текст в бинарном виде или смотрим существующий
-    text = get_text(url_xpath_anna, join(name_dir, 'text.pkl'))
-    save_text(text, join(name_dir, 'text.txt'))
-
-    # токенизация, подсчет общего кол-ва слов, частота встречаемого слова
-    # сохраняем информацию в файле
-    info_tokens = get_info_tokens(text, join(name_dir,'tokens.pkl'))
-    save_result(info_tokens, join(name_dir,'tokens.txt'))
-
-    # если еще не делали, то ищем биграммы и коллокации
-    bigrams = get_bigrams(text, join(name_dir,'bigrams.pkl'))
-    collocations = get_collocs(text, info_tokens, join(name_dir,'collocations.pkl'))
-    save_result(bigrams, join(name_dir,'bigrams.txt'))
-    save_result(collocations, join(name_dir,'collocations.txt'))
-
-    # проверка результатов по критериям Пирсона и отношения правдоподобия
-    check_count = 100.0
-    tp_pirson, tp_likeli = check_results(collocations, bigrams, info_tokens, join(name_dir,'check_res.txt'), check_count)
-    FP = 1.0
-    P_p = tp_pirson*(tp_pirson+FP)/check_count
-    P_l = tp_likeli*(tp_likeli+FP)/check_count
-    print "Точность по Критерию Пирсона: ", P_p
-    print "Точность по методу максимального правдоподобия: ", P_l
-
-    return
 
 def tolstoy():
     name_dir = 'tolstoy_results'
@@ -317,7 +270,7 @@ def tolstoy():
 
     # проверка результатов по критерию Пирсона и отношению правдоподобия
     check_count = 100
-    t_pirson, t_likeli = check_results(collocations, bigrams, info_tokens, join(name_dir,'check_res.txt'), check_count)
+    check_results(collocations, bigrams, info_tokens, join(name_dir,'check_res.txt'), check_count)
     FP_p = 38 # штук не являются коллокацими (посчитано вручную), по критерию Пирсона
     TP_p = 62 # штук являются коллокацими (посчитано вручную), по критерию Пирсона
     FP_l = 34 # штук не являются коллокацими (посчитано вручную), по методу максимального правдоподобия
@@ -331,5 +284,4 @@ def tolstoy():
 
 
 if __name__ == '__main__':
-    # anna()
     tolstoy()
