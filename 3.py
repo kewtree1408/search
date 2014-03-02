@@ -225,7 +225,7 @@ def check_results(collocs, bigrams, info_tokens, fname, check_count=100):
     # начальная гипотеза: H0 – между словами нет зависимости.
     N = sum(collocs.values())
     with codecs.open(fname, encoding='utf-8', mode='w') as f:
-        f.write(u"Колокация | Частота вхождения | Критерий Пирсона | Критерий максимального правдоподобия \n")
+        f.write(u"Колокация | Частота вхождения | Критерий Пирсона | Критерий отношения правдоподобия \n")
         for c in collocs.most_common()[:int(check_count)]:
             res_p = pirson_test(c, bigrams, N)
             res_l = likelihood_ratio(c, info_tokens, N)
@@ -278,7 +278,7 @@ def tolstoy():
     P_p = 1.0*TP_p/(TP_p + FP_p)
     P_l = 1.0*TP_l/(TP_l + FP_l)
     print "Точность по Критерию Пирсона: ", P_p
-    print "Точность по методу максимального правдоподобия: ", P_l
+    print "Точность по Критерию отношения правдоподобия: ", P_l
 
     return
 
