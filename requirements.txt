@@ -1,3 +1,7 @@
 html5lib==1.0b3
 nltk==2.0.4
 requests==1.2.3
+termcolor==1.1.0
+pymorphy
+html2text
+lxml

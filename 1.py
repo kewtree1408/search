@@ -5,9 +5,12 @@ import requests
 import html5lib
 import string
 import logging
+import cPickle
+import collections
+
 from nltk import wordpunct_tokenize
 from nltk.stem.snowball import RussianStemmer
-import collections
+
 
 rus_stemmer = RussianStemmer()
 
@@ -104,6 +107,17 @@ def get_reverse_index(html, path_value):
     logger.info("in index: count_terms_in_rindex = %d, average_length_of_rindex-terms = %f",
         count_uniq_terms, sum(len(t) for t, _ in rindex)*1.0/count_uniq_terms)
 
+    return dict(index_dict)
+
+
+def get_rindex(html, path_value, fname):
+    try:
+        with open(fname, 'rb') as bf:
+            rindex = cPickle.load(bf)
+    except IOError as ex:
+        rindex = get_reverse_index(html, path_value)
+        with open(fname, 'wb') as bf:
+            cPickle.dump(rindex, bf)
     return rindex
 
 
@@ -117,9 +131,8 @@ def main():
         treebuilder="lxml",
         namespaceHTMLElements=False,
     ).getroot()
+    get_rindex(html, '//body/div[1]/xxx7/dd', 'ridx_anna.pkl')
 
-    get_reverse_index(html, '//body/div[1]/xxx7/dd') # для Анны
-    # get_reverse_index(html, '//body/div[1]/div/div/xxx7/dd') # для Кирджали
 
 if __name__ == '__main__':
     main()
