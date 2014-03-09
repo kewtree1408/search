@@ -5,13 +5,16 @@ import requests
 import html5lib
 import string
 import logging
+import cPickle
+import collections
+import re
+
 from nltk import wordpunct_tokenize
 from nltk.stem.snowball import RussianStemmer
-import collections
 from pprint import pprint
 from optparse import OptionParser
-import re
 from termcolor import colored
+
 
 rus_stemmer = RussianStemmer()
 
@@ -23,11 +26,13 @@ fh.setLevel(logging.DEBUG)
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
+
 def is_punctuation(token):
     for punct in string.punctuation:
         if punct in token:
             return True
     return False
+
 
 # получаем уникальные токены для текущего документа
 def get_tokens(text):
@@ -41,6 +46,7 @@ def get_tokens(text):
     count = len(tokens)
     return tokens, count, sum_length
 
+
 # получаем уникальные термы для текущего документа
 def get_terms(tokens):
     terms = set()
@@ -52,6 +58,7 @@ def get_terms(tokens):
     sum_length = sum(len(t) for t in terms)
     count = len(terms)
     return terms, count, sum_length
+
 
 def get_reverse_index(html, path_value):
     doc_id = 0
@@ -86,8 +93,6 @@ def get_reverse_index(html, path_value):
         # запоминаем частоту
         index_dict[term] = freq + 1, sorted(docids + [docid])
 
-    return index_dict
-
     # все что ниже - для сбора статистики
     # обратный индекс
     rindex = sorted(index_dict.items())
@@ -110,6 +115,8 @@ def get_reverse_index(html, path_value):
         count_uniq_tokens, sum(len(t) for t in uniq_tokens)*1.0/count_uniq_tokens)
     logger.info("in index: count_terms_in_rindex = %d, average_length_of_rindex-terms = %f",
         count_uniq_terms, sum(len(t) for t, _ in rindex)*1.0/count_uniq_terms)
+
+    return dict(index_dict)
 
 
 def get_html(url):
@@ -194,10 +201,16 @@ def get_snippet(query, text, nsnippet):
     query_terms = get_query_terms(query)
     sequences = text.split('.')
     snippet = []
-    for seq in sequences[:nsnippet]:
+    n = 0
+    # print text, len(sequences)
+    for seq in sequences:
         seq = seq.strip('\n\t\r')
-        if is_terms_in_seq(query_terms, seq):
+        if is_terms_in_seq(query_terms, seq) and n < nsnippet:
             snippet.append(seq+'.')
+            n += 1
+        elif n > nsnippet:
+            break
+
     return snippet
 
 
@@ -221,6 +234,17 @@ def light_text(terms, snippet):
                 snippet, flags=re.IGNORECASE):
             snippet = snippet.replace(word, colored(word, 'yellow'))
     return snippet
+
+
+def get_rindex(url, xpath, fname):
+    try:
+        with open(fname, 'rb') as bf:
+            rindex = cPickle.load(bf)
+    except IOError as ex:
+        rindex = create_rindex(url, xpath)
+        with open(fname, 'wb') as bf:
+            cPickle.dump(rindex, bf)
+    return rindex
 
 
 def main():
@@ -253,7 +277,7 @@ def main():
     # запрос в unicode-style
     u_query = query.decode('utf8')
     # построили обратный индекс
-    rindex = create_rindex(url1, xpath1)
+    rindex = get_rindex(url1, xpath1, 'ridx_anna.pkl')
     # построили словарь типа "{номер параграфа: текст}"
     doc_context = get_docs_contexts(url1, xpath1)
     # нашли запросы и отсортировали параграфы
